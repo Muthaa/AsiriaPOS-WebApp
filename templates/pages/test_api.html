@@ -1,0 +1,49 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %} Test API Authentication {% endblock title %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Test API Authentication</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="phone_number" name="phone_number" 
+                                   value="{{ phone_number|default:'' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test API</button>
+                    </form>
+
+                    {% if results %}
+                        <hr>
+                        <h5>Test Results:</h5>
+                        {% for result in results %}
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ result.case }}</h6>
+                                    <p class="card-text">
+                                        <strong>Status:</strong> {{ result.status }}<br>
+                                        <strong>Response:</strong> {{ result.response }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %} 

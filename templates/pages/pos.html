@@ -1,0 +1,288 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} POS {% endblock title %}
+{% block content %}
+  <!-- <div class="pc-container">
+    <div class="pc-content">
+      <div class="card"><div class="card-body"><h4>POS</h4><p>Placeholder page.</p></div></div>
+    </div>
+  </div> -->
+  <div class="pc-container mt-4">
+    <div class="pc-content">
+      <div class="row mt-4">
+        <!-- POS Product List -->
+        <div class="col-lg-8 mb-4">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Products</h5>
+              <div>
+                <input type="text" class="form-control form-control-sm" id="pos-search" placeholder="Search products...">
+              </div>
+            </div>
+            <div class="card-body p-2">
+              <div class="row g-2" id="pos-product-list" style="max-height: 420px; overflow-y: auto;">
+                <!-- Example product cards (replace with dynamic content) -->
+                <div class="col-6 col-md-4 col-xl-3">
+                  <div class="card product-card h-100" data-product-id="1">
+                    <div class="card-body text-center p-2">
+                      <img src="{% static 'assets/images/product-1.png' %}" alt="Product" class="img-fluid mb-2" style="max-height:60px;">
+                      <h6 class="mb-1">Coca Cola 500ml</h6>
+                      <div class="text-muted small mb-1">Drinks</div>
+                      <div class="fw-bold mb-2">Ksh 80</div>
+                      <button class="btn btn-primary btn-sm w-100 add-to-cart-btn">
+                        <i class="ti ti-plus"></i> Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-3">
+                  <div class="card product-card h-100" data-product-id="2">
+                    <div class="card-body text-center p-2">
+                      <img src="{% static 'assets/images/product-2.png' %}" alt="Product" class="img-fluid mb-2" style="max-height:60px;">
+                      <h6 class="mb-1">White Bread</h6>
+                      <div class="text-muted small mb-1">Bakery</div>
+                      <div class="fw-bold mb-2">Ksh 120</div>
+                      <button class="btn btn-primary btn-sm w-100 add-to-cart-btn">
+                        <i class="ti ti-plus"></i> Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <!-- Add more product cards as needed -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- POS Cart & Checkout -->
+        <div class="col-lg-4 mb-4">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Cart</h5>
+              <button class="btn btn-outline-danger btn-sm" id="pos-clear-cart">
+                <i class="ti ti-trash"></i> Clear
+              </button>
+            </div>
+            <div class="card-body p-2">
+              <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                <table class="table table-sm align-middle mb-0" id="pos-cart-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th style="width: 60px;">Qty</th>
+                      <th style="width: 80px;">Price</th>
+                      <th style="width: 80px;">Total</th>
+                      <th style="width: 30px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Cart items will be dynamically inserted here -->
+                  </tbody>
+                </table>
+              </div>
+              <div class="mt-3">
+                <div class="d-flex justify-content-between">
+                  <span class="fw-bold">Subtotal:</span>
+                  <span class="fw-bold" id="pos-cart-subtotal">Ksh 0.00</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Tax (0%)</span>
+                  <span id="pos-cart-tax">Ksh 0.00</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between fs-5">
+                  <span class="fw-bold">Total:</span>
+                  <span class="fw-bold text-primary" id="pos-cart-total">Ksh 0.00</span>
+                </div>
+              </div>
+              <button class="btn btn-success w-100 mt-3" id="pos-checkout-btn">
+                <i class="ti ti-cash"></i> Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div class="modal fade" id="posCheckoutModal" tabindex="-1" aria-labelledby="posCheckoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="pos-checkout-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="posCheckoutModalLabel">Checkout</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="pos-payment-method" class="form-label">Payment Method</label>
+            <select class="form-select" id="pos-payment-method" required>
+              <option value="cash">Cash</option>
+              <option value="mpesa">M-Pesa</option>
+              <option value="card">Card</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="pos-amount-received" class="form-label">Amount Received</label>
+            <input type="number" class="form-control" id="pos-amount-received" min="0" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Change Due</label>
+            <input type="text" class="form-control" id="pos-change-due" readonly>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Complete Sale</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
+{% block extra_js %}
+<script>
+  // --- POS Cart Logic ---
+  const products = [
+    {id: 1, name: "Coca Cola 500ml", price: 80, category: "Drinks"},
+    {id: 2, name: "White Bread", price: 120, category: "Bakery"},
+    // Add more products as needed
+  ];
+  let cart = [];
+
+  // Render product cards
+  function renderProducts(filter = "") {
+    const list = document.getElementById('pos-product-list');
+    list.innerHTML = "";
+    products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()))
+      .forEach(product => {
+        const col = document.createElement('div');
+        col.className = "col-6 col-md-4 col-xl-3";
+        col.innerHTML = `
+          <div class="card product-card h-100" data-product-id="${product.id}">
+            <div class="card-body text-center p-2">
+              <img src="{% static 'assets/images/product-${product.id}.png' %}" alt="Product" class="img-fluid mb-2" style="max-height:60px;">
+              <h6 class="mb-1">${product.name}</h6>
+              <div class="text-muted small mb-1">${product.category}</div>
+              <div class="fw-bold mb-2">Ksh ${product.price}</div>
+              <button class="btn btn-primary btn-sm w-100 add-to-cart-btn">
+                <i class="ti ti-plus"></i> Add
+              </button>
+            </div>
+          </div>
+        `;
+        list.appendChild(col);
+      });
+  }
+  renderProducts();
+
+  // Search products
+  document.getElementById('pos-search').addEventListener('input', function() {
+    renderProducts(this.value);
+  });
+
+  // Add to cart
+  document.getElementById('pos-product-list').addEventListener('click', function(e) {
+    if (e.target.closest('.add-to-cart-btn')) {
+      const card = e.target.closest('.product-card');
+      const id = parseInt(card.getAttribute('data-product-id'));
+      const product = products.find(p => p.id === id);
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({...product, qty: 1});
+      }
+      renderCart();
+    }
+  });
+
+  // Render cart
+  function renderCart() {
+    const tbody = document.querySelector('#pos-cart-table tbody');
+    tbody.innerHTML = "";
+    let subtotal = 0;
+    cart.forEach((item, idx) => {
+      const total = item.qty * item.price;
+      subtotal += total;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.name}</td>
+        <td>
+          <input type="number" min="1" value="${item.qty}" class="form-control form-control-sm pos-cart-qty" data-idx="${idx}" style="width:60px;">
+        </td>
+        <td>Ksh ${item.price}</td>
+        <td>Ksh ${total}</td>
+        <td>
+          <button class="btn btn-sm btn-danger pos-cart-remove" data-idx="${idx}"><i class="ti ti-x"></i></button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('pos-cart-subtotal').textContent = "Ksh " + subtotal.toFixed(2);
+    document.getElementById('pos-cart-tax').textContent = "Ksh 0.00";
+    document.getElementById('pos-cart-total').textContent = "Ksh " + subtotal.toFixed(2);
+  }
+
+  // Change quantity or remove item
+  document.getElementById('pos-cart-table').addEventListener('input', function(e) {
+    if (e.target.classList.contains('pos-cart-qty')) {
+      const idx = parseInt(e.target.getAttribute('data-idx'));
+      let val = parseInt(e.target.value);
+      if (val < 1) val = 1;
+      cart[idx].qty = val;
+      renderCart();
+    }
+  });
+  document.getElementById('pos-cart-table').addEventListener('click', function(e) {
+    if (e.target.closest('.pos-cart-remove')) {
+      const idx = parseInt(e.target.closest('.pos-cart-remove').getAttribute('data-idx'));
+      cart.splice(idx, 1);
+      renderCart();
+    }
+  });
+
+  // Clear cart
+  document.getElementById('pos-clear-cart').addEventListener('click', function() {
+    cart = [];
+    renderCart();
+  });
+
+  // Checkout button
+  document.getElementById('pos-checkout-btn').addEventListener('click', function() {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    // Reset modal fields
+    document.getElementById('pos-payment-method').value = "cash";
+    document.getElementById('pos-amount-received').value = "";
+    document.getElementById('pos-change-due').value = "";
+    // Show modal
+    var modal = new bootstrap.Modal(document.getElementById('posCheckoutModal'));
+    modal.show();
+  });
+
+  // Calculate change due
+  document.getElementById('pos-amount-received').addEventListener('input', function() {
+    const total = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const received = parseFloat(this.value) || 0;
+    const change = received - total;
+    document.getElementById('pos-change-due').value = change >= 0 ? "Ksh " + change.toFixed(2) : "Ksh 0.00";
+  });
+
+  // Complete sale
+  document.getElementById('pos-checkout-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Here you would send the sale to the backend
+    // For now, just show a success message and clear cart
+    alert("Sale completed! Thank you.");
+    cart = [];
+    renderCart();
+    var modal = bootstrap.Modal.getInstance(document.getElementById('posCheckoutModal'));
+    modal.hide();
+  });
+
+  // Initial cart render
+  renderCart();
+</script>
+{% endblock extra_js %}
+

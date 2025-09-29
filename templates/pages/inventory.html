@@ -1,0 +1,331 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Inventory {% endblock title %}
+{% block content %}
+  <!-- <div class="pc-container">
+    <div class="pc-content">
+      <div class="card"><div class="card-body"><h4>Inventory</h4><p>Placeholder page.</p></div></div>
+    </div>
+  </div> -->
+
+  <div class="pc-container mt-4">
+    <div class="pc-content">
+      <div class="row">
+        <div class="col-lg-9 mb-4">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Inventory List</h5>
+              <button class="btn btn-primary btn-sm" id="refresh-inventory-btn">
+                <i class="ti ti-refresh"></i> Refresh
+              </button>
+              <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="ti ti-plus"></i> Add Product
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <input type="text" class="form-control" id="inventory-search" placeholder="Search products...">
+              </div>
+              <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-0" id="inventory-table">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>SKU</th>
+                      <th>Stock</th>
+                      <th>Unit Price</th>
+                      <th>Reorder Level</th>
+                      <th style="width: 90px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Inventory rows will be dynamically inserted here -->
+                  </tbody>
+                </table>
+              </div>
+              <div class="text-center mt-3" id="inventory-empty" style="display:none;">
+                <span class="text-muted">No products found.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Inventory Summary -->
+        <div class="col-lg-3 mb-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h6 class="mb-0">Summary</h6>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Total Products
+                  <span class="fw-bold" id="summary-total-products">0</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Total Stock
+                  <span class="fw-bold" id="summary-total-stock">0</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Low Stock
+                  <span class="fw-bold text-danger" id="summary-low-stock">0</span>
+                </li>
+              </ul>
+            </div>
+            <div class="card mt-4">
+              <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+              </div>
+              <div class="card-body">
+                <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                  <i class="ti ti-plus"></i> Add Product
+                </button>
+                <button class="btn btn-outline-primary w-100" id="refresh-inventory-btn">
+                  <i class="ti ti-refresh"></i> Refresh
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Product Modal -->
+  <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="product-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="product-id">
+          <div class="mb-3">
+            <label for="product-name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="product-name" required>
+          </div>
+          <div class="mb-3">
+            <label for="product-category" class="form-label">Category</label>
+            <input type="text" class="form-control" id="product-category" required>
+          </div>
+          <div class="mb-3">
+            <label for="product-sku" class="form-label">SKU</label>
+            <input type="text" class="form-control" id="product-sku">
+          </div>
+          <div class="mb-3">
+            <label for="product-stock" class="form-label">Stock</label>
+            <input type="number" class="form-control" id="product-stock" min="0" required>
+          </div>
+          <div class="mb-3">
+            <label for="product-unit-price" class="form-label">Unit Price</label>
+            <input type="number" class="form-control" id="product-unit-price" min="0" step="0.01" required>
+          </div>
+          <div class="mb-3">
+            <label for="product-reorder-level" class="form-label">Reorder Level</label>
+            <input type="number" class="form-control" id="product-reorder-level" min="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="product-save-btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Product Modal -->
+  <div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="delete-product-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="delete-product-id">
+          <p>Are you sure you want to delete <span class="fw-bold" id="delete-product-name"></span>?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+{% endblock content %}
+{% block extra_js %}
+<script>
+const API_BASE = "http://127.0.0.1:8080/api/products/";
+let inventoryData = [];
+
+// Fetch inventory from API
+async function fetchInventory() {
+  try {
+    const res = await fetch(API_BASE, { credentials: "include" });
+    if (!res.ok) throw new Error("Failed to fetch inventory");
+    inventoryData = await res.json();
+    renderInventoryTable();
+    renderSummary();
+  } catch (e) {
+    document.querySelector("#inventory-table tbody").innerHTML = `<tr><td colspan="7" class="text-danger text-center">${e.message}</td></tr>`;
+    document.getElementById("inventory-empty").style.display = "";
+  }
+}
+
+// Render inventory table
+function renderInventoryTable(filter = "") {
+  const tbody = document.querySelector("#inventory-table tbody");
+  let filtered = inventoryData;
+  if (filter) {
+    filtered = inventoryData.filter(item =>
+      (item.name && item.name.toLowerCase().includes(filter.toLowerCase())) ||
+      (item.category && item.category.toLowerCase().includes(filter.toLowerCase())) ||
+      (item.sku && item.sku.toLowerCase().includes(filter.toLowerCase()))
+    );
+  }
+  tbody.innerHTML = "";
+  if (filtered.length === 0) {
+    document.getElementById("inventory-empty").style.display = "";
+    return;
+  }
+  document.getElementById("inventory-empty").style.display = "none";
+  filtered.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${item.name || ""}</td>
+      <td>${item.category || ""}</td>
+      <td>${item.sku || ""}</td>
+      <td class="${item.stock <= (item.reorder_level || 0) ? 'text-danger fw-bold' : ''}">${item.stock ?? 0}</td>
+      <td>Ksh ${item.unit_price ? Number(item.unit_price).toFixed(2) : "0.00"}</td>
+      <td>${item.reorder_level ?? ""}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary me-1 edit-product-btn" data-id="${item.id}"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger delete-product-btn" data-id="${item.id}" data-name="${item.name}"><i class="ti ti-trash"></i></button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Render summary
+function renderSummary() {
+  document.getElementById("summary-total-products").textContent = inventoryData.length;
+  document.getElementById("summary-total-stock").textContent = inventoryData.reduce((sum, p) => sum + (p.stock || 0), 0);
+  document.getElementById("summary-low-stock").textContent = inventoryData.filter(p => (p.stock || 0) <= (p.reorder_level || 0)).length;
+}
+
+// Search
+document.getElementById("inventory-search").addEventListener("input", function() {
+  renderInventoryTable(this.value);
+});
+
+// Refresh
+document.getElementById("refresh-inventory-btn").addEventListener("click", function() {
+  fetchInventory();
+});
+
+// Add Product Modal
+document.getElementById("addProductModal").addEventListener("show.bs.modal", function(e) {
+  // Reset form
+  document.getElementById("product-form").reset();
+  document.getElementById("product-id").value = "";
+  document.getElementById("addProductModalLabel").textContent = "Add Product";
+  document.getElementById("product-save-btn").textContent = "Save";
+});
+
+// Edit Product
+document.querySelector("#inventory-table").addEventListener("click", function(e) {
+  if (e.target.closest(".edit-product-btn")) {
+    const id = e.target.closest(".edit-product-btn").getAttribute("data-id");
+    const product = inventoryData.find(p => p.id == id);
+    if (!product) return;
+    document.getElementById("product-id").value = product.id;
+    document.getElementById("product-name").value = product.name || "";
+    document.getElementById("product-category").value = product.category || "";
+    document.getElementById("product-sku").value = product.sku || "";
+    document.getElementById("product-stock").value = product.stock ?? 0;
+    document.getElementById("product-unit-price").value = product.unit_price ?? 0;
+    document.getElementById("product-reorder-level").value = product.reorder_level ?? "";
+    document.getElementById("addProductModalLabel").textContent = "Edit Product";
+    document.getElementById("product-save-btn").textContent = "Update";
+    var modal = new bootstrap.Modal(document.getElementById("addProductModal"));
+    modal.show();
+  }
+});
+
+// Delete Product
+document.querySelector("#inventory-table").addEventListener("click", function(e) {
+  if (e.target.closest(".delete-product-btn")) {
+    const id = e.target.closest(".delete-product-btn").getAttribute("data-id");
+    const name = e.target.closest(".delete-product-btn").getAttribute("data-name");
+    document.getElementById("delete-product-id").value = id;
+    document.getElementById("delete-product-name").textContent = name;
+    var modal = new bootstrap.Modal(document.getElementById("deleteProductModal"));
+    modal.show();
+  }
+});
+
+// Save/Add Product
+document.getElementById("product-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const id = document.getElementById("product-id").value;
+  const data = {
+    name: document.getElementById("product-name").value,
+    category: document.getElementById("product-category").value,
+    sku: document.getElementById("product-sku").value,
+    stock: Number(document.getElementById("product-stock").value),
+    unit_price: Number(document.getElementById("product-unit-price").value),
+    reorder_level: Number(document.getElementById("product-reorder-level").value)
+  };
+  try {
+    let res;
+    if (id) {
+      res = await fetch(API_BASE + id + "/", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data)
+      });
+    } else {
+      res = await fetch(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data)
+      });
+    }
+    if (!res.ok) throw new Error("Failed to save product");
+    var modal = bootstrap.Modal.getInstance(document.getElementById("addProductModal"));
+    modal.hide();
+    fetchInventory();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+// Delete Product Confirm
+document.getElementById("delete-product-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const id = document.getElementById("delete-product-id").value;
+  try {
+    const res = await fetch(API_BASE + id + "/", {
+      method: "DELETE",
+      credentials: "include"
+    });
+    if (!res.ok) throw new Error("Failed to delete product");
+    var modal = bootstrap.Modal.getInstance(document.getElementById("deleteProductModal"));
+    modal.hide();
+    fetchInventory();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+// Initial load
+fetchInventory();
+</script>
+{% endblock extra_js %}
+
