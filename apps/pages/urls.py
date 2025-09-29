@@ -12,7 +12,23 @@ urlpatterns = [
     # App sections
     path('pos/', views.pos, name='pos'),
     path('purchases/', views.purchases, name='purchases'),
+
     path('inventory/', views.inventory, name='inventory'),
+    path("inventory/add/", views.add_product, name="add_product"),
+    path("inventory/<int:product_id>/edit/", views.edit_product, name="edit_product"),
+    path("inventory/delete/", views.delete_products, name="delete_products"),
+    path("inventory/upload/", views.upload_products_csv, name="upload_products_csv"),
+
+    path("inventory/management/", views.product_management, name="product_management"),
+
+    path("inventory/category/add/", views.add_category, name="add_category"),
+    path("inventory/category/edit/<uuid:category_id>/", views.edit_category, name="edit_category"),
+    path("inventory/category/delete/<uuid:category_id>/", views.delete_category, name="delete_category"),
+
+    path("inventory/unit/add/", views.add_unit, name="add_unit"),
+    path("inventory/unit/edit/<uuid:unit_id>/", views.edit_unit, name="edit_unit"),
+    path("inventory/unit/delete/<uuid:unit_id>/", views.delete_unit, name="delete_unit"),
+
     path('sales/', views.sales, name='sales'),
     path('expenses/', views.expenses, name='expenses'),
     path('users/', views.users, name='users'),

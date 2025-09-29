@@ -1,0 +1,61 @@
+<div class="row">
+  <div class="col-md-6 mb-3">
+    <label for="name" class="form-label">Name</label>
+    <input type="text" name="name" id="name" class="form-control" required>
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label for="category" class="form-label">Category</label>
+    <select name="category" id="category" class="form-select" required>
+      <option value="">Select Category</option>
+      {% for cat in categories %}
+        <option value="{{ cat.category_id }}">{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label for="unit" class="form-label">Unit</label>
+    <select name="unit" id="unit" class="form-select" required>
+      <option value="">Select Unit</option>
+      {% for u in units %}
+        <option value="{{ u.unit_id }}">{{ u.unit_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label for="description" class="form-label">Description</label>
+    <textarea name="description" id="description" class="form-control" rows="2"></textarea>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <label for="minQuantity" class="form-label">Minimum Quantity</label>
+    <input type="number" name="minQuantity" id="minQuantity" class="form-control" min="0" required>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <label for="stock" class="form-label">Stock</label>
+    <input type="number" name="stock" id="stock" class="form-control" min="0" required>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <label for="cost" class="form-label">Cost</label>
+    <input type="number" step="0.01" name="cost" id="cost" class="form-control" min="0" required>
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label for="price" class="form-label">Price</label>
+    <input type="number" step="0.01" name="price" id="price" class="form-control" min="0" required>
+  </div>
+
+  <!-- Optional display-only SKU and Barcode when editing -->
+  <div class="col-md-6 mb-3">
+    <label for="sku" class="form-label">SKU</label>
+    <input type="text" name="sku" id="sku" class="form-control" readonly>
+  </div>
+  <div class="col-md-6 mb-3">
+    <label for="barcode" class="form-label">Barcode</label>
+    <input type="text" name="barcode" id="barcode" class="form-control" readonly>
+  </div>
+</div>

@@ -1,0 +1,84 @@
+<div class="modal fade" id="categoriesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Manage Categories</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-sm table-bordered">
+            <thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
+            <tbody>
+              {% for c in categories %}
+                <tr>
+                  <td>{{ c.name }}</td>
+                  <td>{{ c.description }}</td>
+                  <td>
+                    <!-- Edit Form -->
+                    <button 
+                      class="btn btn-sm btn-outline-primary edit-category-btn"
+                      data-id="{{ c.category_id }}"
+                      data-name="{{ c.name }}"
+                      data-description="{{ c.description }}">
+                      Edit
+                    </button>
+                    <form method="POST" action="{% url 'delete_category' c.category_id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+  
+          <!-- Add New -->
+          <form method="POST" action="{% url 'add_category' %}" class="mt-3">
+            {% csrf_token %}
+            <div class="row g-2">
+              <div class="col-md-5"><input name="name" placeholder="Category name" class="form-control" required></div>
+              <div class="col-md-5"><input name="description" placeholder="Description" class="form-control"></div>
+              <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edit Modal -->
+  <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" method="POST" id="edit-category-form">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Category</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" name="name" id="edit-category-name" class="form-control mb-2" placeholder="Name" required>
+          <input type="text" name="description" id="edit-category-description" class="form-control" placeholder="Description">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+  document.querySelectorAll('.edit-category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      const desc = btn.dataset.description;
+      const form = document.getElementById('edit-category-form');
+      form.action = `/inventory/category/edit/${id}/`;
+      document.getElementById('edit-category-name').value = name;
+      document.getElementById('edit-category-description').value = desc;
+      new bootstrap.Modal(document.getElementById('editCategoryModal')).show();
+    });
+  });
+  </script>
+  

@@ -1,0 +1,114 @@
+<!-- Units Management Modal -->
+<div class="modal fade" id="unitsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Manage Units</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+  
+        <div class="modal-body">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Unit Name</th>
+                <th>Description</th>
+                <th style="width: 140px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in units %}
+                <tr>
+                  <td>{{ u.unit_name }}</td>
+                  <td>{{ u.description }}</td>
+                  <td>
+                    <!-- Edit Button -->
+                    <button 
+                      type="button" 
+                      class="btn btn-sm btn-outline-primary edit-unit-btn"
+                      data-id="{{ u.unit_id }}"
+                      data-name="{{ u.unit_name }}"
+                      data-description="{{ u.description }}">
+                      <i class="ti ti-edit"></i> Edit
+                    </button>
+  
+                    <!-- Delete Form -->
+                    <form method="POST" action="{% url 'delete_unit' u.unit_id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="ti ti-trash"></i> Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">No units found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+  
+          <!-- Add New Unit Form -->
+          <form method="POST" action="{% url 'add_unit' %}" class="mt-4">
+            {% csrf_token %}
+            <div class="row g-2 align-items-center">
+              <div class="col-md-4">
+                <input type="text" name="unit_name" placeholder="Unit name" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <input type="text" name="description" placeholder="Description" class="form-control">
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Add</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edit Unit Modal -->
+  <div class="modal fade" id="editUnitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" method="POST" id="edit-unit-form">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Unit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Unit Name</label>
+            <input type="text" name="unit_name" id="edit-unit-name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <input type="text" name="description" id="edit-unit-description" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- JavaScript -->
+  <script>
+  document.querySelectorAll('.edit-unit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      const desc = btn.dataset.description;
+  
+      const form = document.getElementById('edit-unit-form');
+      form.action = `/inventory/unit/edit/${id}/`;
+      document.getElementById('edit-unit-name').value = name;
+      document.getElementById('edit-unit-description').value = desc;
+  
+      new bootstrap.Modal(document.getElementById('editUnitModal')).show();
+    });
+  });
+  </script>
+  

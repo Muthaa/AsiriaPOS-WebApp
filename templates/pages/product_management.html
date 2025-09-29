@@ -1,0 +1,152 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Product Management {% endblock title %}
+
+{% block content %}
+<div class="pc-container mt-4">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="mb-0">🧭 Product Management</h4>
+      <div>
+        <a href="{% url 'inventory' %}" class="btn btn-outline-primary me-2">
+          <i class="ti ti-arrow-left"></i> Back to Inventory
+        </a>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Total Products</h6>
+            <h3>{{ products|length }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Total Categories</h6>
+            <h3>{{ categories|length }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Total Units</h6>
+            <h3>{{ units|length }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Active Alerts</h6>
+            <h3>{{ alerts|length }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-4">
+      <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#categoriesModal">
+        <i class="ti ti-tags"></i> Manage Categories
+      </button>
+      <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#unitsModal">
+        <i class="ti ti-scale"></i> Manage Units
+      </button>
+      <button class="btn btn-outline-secondary me-2">
+        <i class="ti ti-report-analytics"></i> Stock Adjustments
+      </button>
+      <button class="btn btn-outline-secondary">
+        <i class="ti ti-arrows-exchange"></i> Transfers
+      </button>
+    </div>
+
+    <!-- Tabs for Details -->
+    <ul class="nav nav-tabs mb-3" id="managementTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button">Stock Alerts</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="movements-tab" data-bs-toggle="tab" data-bs-target="#movements" type="button">Stock Movements</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="adjustments-tab" data-bs-toggle="tab" data-bs-target="#adjustments" type="button">Stock Adjustments</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="managementTabsContent">
+      <!-- Alerts Tab -->
+      <div class="tab-pane fade show active" id="alerts" role="tabpanel">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">🚨 Active Stock Alerts</h6>
+          </div>
+          <div class="card-body">
+            {% if alerts %}
+              <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Product</th>
+                      <th>Type</th>
+                      <th>Message</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for alert in alerts %}
+                      <tr>
+                        <td>{{ alert.product_name }}</td>
+                        <td>{{ alert.alert_type }}</td>
+                        <td>{{ alert.message }}</td>
+                        <td>{{ alert.created_at|date:"Y-m-d H:i" }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="text-muted mb-0 text-center">No active alerts</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Movements Tab -->
+      <div class="tab-pane fade" id="movements" role="tabpanel">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">📦 Recent Stock Movements</h6>
+          </div>
+          <div class="card-body text-muted text-center">
+            Coming soon: stock movement log
+          </div>
+        </div>
+      </div>
+
+      <!-- Adjustments Tab -->
+      <div class="tab-pane fade" id="adjustments" role="tabpanel">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">🧾 Stock Adjustments</h6>
+          </div>
+          <div class="card-body text-muted text-center">
+            Coming soon: manual adjustments & approvals
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include the modals -->
+{% include 'pages/includes/categories_modal.html' %}
+{% include 'pages/includes/unit_modal.html' %}
+{% endblock content %}

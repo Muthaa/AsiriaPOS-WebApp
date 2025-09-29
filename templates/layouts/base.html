@@ -5,41 +5,45 @@
   <title>{% block title %}{% endblock title %} | AsiriaPOS</title>
 
   <link rel="canonical" href="//www.asiriatech.ke/" />
-
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta
-    name="description"
-    content="AsiriaPOS is a point of sale system for small businesses."
-  />
-  <meta name="keywords" content="AsiriaPOS, Point of Sale, POS, Small Business, Retail, Inventory Management, Sales, Reporting, Analytics" />
+  <meta name="description" content="AsiriaPOS is a point of sale system for small businesses." />
+  <meta name="keywords" content="AsiriaPOS, POS, Small Business, Inventory Management" />
   <meta name="author" content="AsiriaTech" />
 
   {% include 'includes/styles.html' %}
-
   {% block extrastyle %}{% endblock extrastyle %}
-
 </head>
+
 <body>
-  {% block loader %}
-    {% include 'includes/loader.html' %}
-  {% endblock loader %}
-  {% block header %}
-    {% include 'includes/navigation.html' %}
-  {% endblock header %}
-  {% block sidebar %}
-    {% include 'includes/sidebar.html' %}
-  {% endblock sidebar %}
+  {% block loader %}{% include 'includes/loader.html' %}{% endblock loader %}
+  {% block header %}{% include 'includes/navigation.html' %}{% endblock header %}
+  {% block sidebar %}{% include 'includes/sidebar.html' %}{% endblock sidebar %}
+
+  <!-- ✅ SweetAlert2 Messages Toasts -->
+  {% if messages %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        {% for message in messages %}
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+            icon: "{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}",
+            title: "{{ message|escapejs }}"
+          });
+        {% endfor %}
+      });
+    </script>
+  {% endif %}
 
   {% block content %}{% endblock content %}
-
-  {% block footer %}
-    {% include 'includes/footer.html' %}
-  {% endblock footer %}
-
+  {% block footer %}{% include 'includes/footer.html' %}{% endblock footer %}
   {% include 'includes/scripts.html' %}
-
   {% block extra_js %}{% endblock extra_js %}
 </body>
 </html>

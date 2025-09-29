@@ -8,6 +8,7 @@ from .forms import RegistrationForm, LoginForm
 from .decorators import api_login_required
 from .utils import clear_api_session
 from django.http import JsonResponse
+from .utils import make_authenticated_request
 
 # Create your views here.
 
@@ -23,7 +24,6 @@ def get_todays_sales(request):
     Fetch today's sales data from the API
     """
     try:
-        from .utils import make_authenticated_request
         
         response = make_authenticated_request(
             request, 
@@ -198,7 +198,288 @@ def purchases(request):
 
 @api_login_required
 def inventory(request):
-    return render(request, 'pages/inventory.html')
+    products = []
+    categories = []
+    units = []
+    total_stock = 0
+    low_stock_count = 0
+
+    # Fetch Products
+    resp_products = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/products/")
+    if resp_products.status_code == 200:
+        products = resp_products.json()
+        total_stock = sum(p.get("stock", 0) for p in products)
+        low_stock_count = sum(1 for p in products if p.get("stock", 0) <= p.get("minQuantity", 0))
+
+    # Fetch Categories
+    resp_cats = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/categories/")
+    if resp_cats.status_code == 200:
+        categories = resp_cats.json()
+
+    # Fetch Units
+    resp_units = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/units/")
+    if resp_units.status_code == 200:
+        units = resp_units.json()
+
+    context = {
+        "products": products,
+        "categories": categories,
+        "units": units,
+        "total_stock": total_stock,
+        "low_stock_count": low_stock_count,
+    }
+    return render(request, "pages/inventory.html", context)
+
+@api_login_required
+def add_product(request):
+    if request.method == "POST":
+        user_client = request.session.get("user_client_id")
+        if not user_client:
+            messages.error(request, "⚠️ Missing user_client_id. Please re-login.")
+            return redirect("inventory")
+
+        category_id = request.POST.get("category")
+        unit_id = request.POST.get("unit")
+
+        if not category_id or not unit_id:
+            messages.error(request, "⚠️ Please select both a category and a unit.")
+            return redirect("inventory")
+
+        data = {
+            "user_client": user_client,          # UUID
+            "category": category_id,             # UUID string ✅
+            "unit": unit_id,                     # UUID string ✅
+            "name": request.POST.get("name"),
+            "sku": request.POST.get("sku") or "",
+            "barcode": request.POST.get("barcode") or "",
+            "description": request.POST.get("description") or "",
+            "minQuantity": int(request.POST.get("minQuantity") or 0),
+            "price": str(request.POST.get("price") or "0.00"),
+            "cost": str(request.POST.get("cost") or "0.00"),
+            "stock": int(request.POST.get("stock") or 0),
+        }
+
+        # print("📦 ADD PRODUCT DATA:", data)
+        resp = make_authenticated_request(request, "POST", "http://127.0.0.1:8080/api/products/", data=data)
+        # print("📦 RESPONSE:", resp.status_code, resp.text)
+
+        if resp.status_code in [200, 201]:
+            messages.success(request, "✅ Product added successfully.")
+        else:
+            messages.error(request, f"❌ Failed to add product: {resp.text}")
+
+    return redirect("inventory")
+
+# ----------------- EDIT PRODUCT -----------------
+@api_login_required
+def edit_product(request, product_id):
+    if request.method == "POST":
+        user_client = request.session.get("user_client_id")
+        if not user_client:
+            messages.error(request, "⚠️ Missing user client. Please re-login.")
+            return redirect("inventory")
+
+        data = {
+            "user_client": user_client,                      # UUID string
+            "category": request.POST.get("category"),         # UUID string
+            "unit": request.POST.get("unit"),                 # UUID string
+            "name": request.POST.get("name"),
+            "sku": request.POST.get("sku") or "",
+            "barcode": request.POST.get("barcode") or "",
+            "description": request.POST.get("description") or "",
+            "minQuantity": int(request.POST.get("minQuantity") or 0),
+            "price": str(request.POST.get("price") or "0.00"),
+            "cost": str(request.POST.get("cost") or "0.00"),
+            "stock": int(request.POST.get("stock") or 0),
+        }
+
+        url = f"http://127.0.0.1:8080/api/products/{product_id}/"
+        print("✏️ EDIT PRODUCT:", data)
+
+        response = make_authenticated_request(request, "PUT", url, data=data)
+        print("✏️ RESPONSE:", response.status_code, response.text)
+
+        if response.status_code in (200, 201):
+            messages.success(request, "✅ Product updated successfully.")
+        else:
+            messages.error(request, f"❌ Failed to update product: {response.text}")
+
+    return redirect("inventory")
+
+# ----------------- DELETE PRODUCT(S) -----------------
+@api_login_required
+def delete_products(request):
+    if request.method == "POST":
+        ids = request.POST.getlist("product_ids")
+        deleted = 0
+        for pid in ids:
+            url = f"http://127.0.0.1:8080/api/products/{pid}/"
+            resp = make_authenticated_request(request, "DELETE", url)
+            if resp.status_code in (200, 204):
+                deleted += 1
+
+        if deleted:
+            messages.success(request, f"🗑️ Deleted {deleted} product(s).")
+        else:
+            messages.error(request, "⚠️ No products deleted.")
+    return redirect("inventory")
+
+# ----------------- UPLOAD CSV -----------------
+@api_login_required
+def upload_products_csv(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        file = request.FILES["file"]
+        decoded = file.read().decode("utf-8")
+        reader = csv.DictReader(io.StringIO(decoded))
+
+        user_client = request.session.get("user_client_id")
+        if not user_client:
+            messages.error(request, "⚠️ Missing user client. Please re-login.")
+            return redirect("inventory")
+
+        count = 0
+        for row in reader:
+            # Validate required fields exist
+            if not row.get("name") or not row.get("category") or not row.get("unit"):
+                continue  # skip incomplete rows
+
+            data = {
+                "user_client": user_client,
+                "category": row.get("category"),     # UUID or ID
+                "unit": row.get("unit"),             # UUID or ID
+                "name": row.get("name"),
+                "sku": row.get("sku") or "",
+                "barcode": row.get("barcode") or "",
+                "description": row.get("description") or "",
+                "minQuantity": int(row.get("minQuantity") or 0),
+                "price": str(row.get("price") or "0.00"),
+                "cost": str(row.get("cost") or "0.00"),
+                "stock": int(row.get("stock") or 0),
+            }
+
+            resp = make_authenticated_request(request, "POST", "http://127.0.0.1:8080/api/products/", data=data)
+            if resp.status_code in (200, 201):
+                count += 1
+            else:
+                print("⚠️ Failed row:", row, resp.text)
+
+        messages.success(request, f"📦 Uploaded {count} products from CSV.")
+    else:
+        messages.error(request, "⚠️ No file selected or invalid format.")
+
+    return redirect("inventory")
+
+API_BASE = "http://127.0.0.1:8080/api/"
+
+@api_login_required
+def product_management(request):
+    """Show product management dashboard with categories, units, alerts, etc."""
+    products = make_authenticated_request(request, "GET", f"{API_BASE}products/").json()
+    categories = make_authenticated_request(request, "GET", f"{API_BASE}categories/").json()
+    units = make_authenticated_request(request, "GET", f"{API_BASE}units/").json()
+    alerts = make_authenticated_request(request, "GET", f"{API_BASE}stock-alerts/").json()
+
+    return render(request, "pages/product_management.html", {
+        "products": products,
+        "categories": categories,
+        "units": units,
+        "alerts": alerts,
+    })
+
+# ----------------- CATEGORY CRUD -----------------
+@api_login_required
+def add_category(request):
+    if request.method == "POST":
+        data = {
+            "user_client": request.session.get("user_client_id"),
+            "name": request.POST.get("name"),
+            "description": request.POST.get("description") or "",
+        }
+        resp = make_authenticated_request(request, "POST", f"{API_BASE}categories/", data=data)
+        if resp.status_code in (200, 201):
+            messages.success(request, "✅ Category added successfully.")
+        else:
+            messages.error(request, f"❌ Failed to add category: {resp.text}")
+    return redirect("product_management")
+
+@api_login_required
+def edit_category(request, category_id):
+    if request.method == "POST":
+        user_client = request.session.get("user_client_id")
+
+        data = {
+            "user_client": user_client,
+            "name": request.POST.get("name"),
+            "description": request.POST.get("description") or "",
+        }
+
+        url = f"{API_BASE}categories/{category_id}/"
+        resp = make_authenticated_request(request, "PUT", url, data=data)
+
+        if resp.status_code in [200, 201]:
+            messages.success(request, "✏️ Category updated successfully.")
+        else:
+            messages.error(request, f"❌ Failed to update: {resp.text}")
+
+    return redirect("product_management")
+
+@api_login_required
+def delete_category(request, category_id):
+    url = f"{API_BASE}categories/{category_id}/"
+    resp = make_authenticated_request(request, "DELETE", url)
+    if resp.status_code in (200, 204):
+        messages.success(request, "🗑️ Category deleted.")
+    else:
+        messages.error(request, f"❌ Delete failed: {resp.text}")
+    return redirect("product_management")
+
+# ----------------- UNIT CRUD -----------------
+@api_login_required
+def add_unit(request):
+    if request.method == "POST":
+        data = {
+            "user_client": request.session.get("user_client_id"),
+            "unit_name": request.POST.get("unit_name"),
+            "description": request.POST.get("description") or "",
+        }
+        resp = make_authenticated_request(request, "POST", f"{API_BASE}units/", data=data)
+        if resp.status_code in (200, 201):
+            messages.success(request, "✅ Unit added successfully.")
+        else:
+            messages.error(request, f"❌ Failed to add unit: {resp.text}")
+    return redirect("product_management")
+
+@api_login_required
+def edit_unit(request, unit_id):
+    if request.method == "POST":
+        user_client = request.session.get("user_client_id")
+
+        data = {
+            "user_client": user_client,
+            "unit_name": request.POST.get("unit_name"),
+            "description": request.POST.get("description") or "",
+        }
+
+        url = f"{API_BASE}units/{unit_id}/"
+        resp = make_authenticated_request(request, "PUT", url, data=data)
+
+        if resp.status_code in [200, 201]:
+            messages.success(request, "✏️ Unit updated successfully.")
+        else:
+            messages.error(request, f"❌ Failed to update: {resp.text}")
+
+    return redirect("product_management")
+
+@api_login_required
+def delete_unit(request, unit_id):
+    url = f"{API_BASE}units/{unit_id}/"
+    resp = make_authenticated_request(request, "DELETE", url)
+    if resp.status_code in (200, 204):
+        messages.success(request, "🗑️ Unit deleted.")
+    else:
+        messages.error(request, f"❌ Delete failed: {resp.text}")
+    return redirect("product_management")
+
 
 @api_login_required
 def sales(request):
