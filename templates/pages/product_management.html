@@ -3,6 +3,12 @@
 {% block title %} Product Management {% endblock title %}
 
 {% block content %}
+{% if not api_online %}
+  <div class="alert alert-warning">
+    {{ error_message }}
+  </div>
+{% endif %}
+
 <div class="pc-container mt-4">
   <div class="pc-content">
 

@@ -3,21 +3,27 @@
 {% block title %}Inventory{% endblock title %}
 {% block content %}
 
+{% if not api_online %}
+  <div class="alert alert-warning">
+    {{ error_message }}
+  </div>
+{% endif %}
+
 <div class="pc-container mt-4">
   <div class="pc-content">
     <div class="row">
       <!-- 🧾 Inventory List -->
       <div class="col-lg-9 mb-4">
         <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Inventory List</h5>
-            <div>
-              <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#uploadCsvModal">
-                <i class="ti ti-upload"></i> Upload CSV
-              </button>
-              <a href="{% url 'inventory' %}" class="btn btn-outline-secondary btn-sm me-2">
+          <div class="card-header d-flex flex-wrap justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-2">Inventory List</h4>
+            <div class="d-flex flex-wrap gap-2">
+
+              <!-- Refresh -->
+              <a href="{% url 'inventory' %}" class="btn btn-outline-primary btn-sm">
                 <i class="ti ti-refresh"></i> Refresh
               </a>
+              <!-- Add Product -->
               <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
                 <i class="ti ti-plus"></i> Add Product
               </button>
@@ -25,21 +31,42 @@
           </div>
 
           <div class="card-body">
+            <!-- Search + Filter -->
+            <div class="row mb-3 g-2">
+              <div class="col-md-6">
+                <input type="text" class="form-control" id="inventory-search" placeholder="🔍 Search products...">
+              </div>
+              <div class="col-md-3">
+                <select id="filter-category" class="form-select">
+                  <option value="">All Categories</option>
+                  {% for cat in categories %}
+                  <option value="{{ cat.name }}">{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select id="filter-stock" class="form-select">
+                  <option value="">All Stock</option>
+                  <option value="low">Low Stock</option>
+                  <option value="ok">OK</option>
+                </select>
+              </div>
+            </div>
             <form method="POST" action="{% url 'delete_products' %}" id="delete-products-form">
               {% csrf_token %}
               <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
+                <table id="inventory-table" class="table table-bordered align-middle mb-0">
                   <thead class="table-light">
                     <tr>
                       <th><input type="checkbox" id="select-all"></th>
-                      <th>Barcode</th>
-                      <th>Name</th>
-                      <th>SKU</th>
-                      <th>Category</th>
-                      <th>Stock</th>
-                      <th>Min Qty</th>
-                      <th>Cost</th>
-                      <th>Price</th>
+                      <th class="sortable" data-key="barcode">Barcode</th>
+                      <th class="sortable" data-key="name">Name</th>
+                      <th class="sortable" data-key="sku">SKU</th>
+                      <th class="sortable" data-key="category">Category</th>
+                      <th class="sortable" data-key="stock" data-type="number">Stock</th>
+                      <th class="sortable" data-key="minquantity" data-type="number">Min Qty</th>
+                      <th class="sortable" data-key="cost" data-type="number">Cost</th>
+                      <th class="sortable" data-key="price" data-type="number">Price</th>
                       <th>Low Stock</th>
                       <th style="width: 90px;">Actions</th>
                     </tr>
@@ -47,7 +74,15 @@
                   <tbody>
                     {% if products %}
                       {% for p in products %}
-                        <tr>
+                        <tr 
+                          data-name="{{ p.name|lower }}" 
+                          data-category="{{ p.category_name|lower }}" 
+                          data-barcode="{{ p.barcode|lower }}" 
+                          data-sku="{{ p.sku|lower }}"
+                          data-stock="{{ p.stock|default:0 }}" 
+                          data-minquantity="{{ p.minQuantity|default:0 }}"
+                          data-cost="{{ p.cost|default:0 }}"
+                          data-price="{{ p.price|default:0 }}">
                           <td><input type="checkbox" name="product_ids" value="{{ p.product_id }}"></td>
                           <td>{{ p.barcode }}</td>
                           <td>{{ p.name }}</td>
@@ -90,11 +125,10 @@
                     {% else %}
                       <tr><td colspan="11" class="text-center text-muted">No products found.</td></tr>
                     {% endif %}
-                  </tbody>
+                  </tbody>                 
                 </table>
               </div>
               
-
               <div class="mt-3">
                 <button type="button" class="btn btn-danger btn-sm" id="delete-selected">
                   <i class="ti ti-trash"></i> Delete Selected
@@ -108,6 +142,29 @@
       <!-- 📊 Summary -->
       <div class="col-lg-3 mb-4">
         <div class="card h-100">
+          <!-- Quick Actions -->
+          <div class="card mt-4">
+            <div class="card-header">
+              <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+              <!-- Product Management Button -->
+              <a href="{% url 'product_management' %}" class="btn btn-outline-success w-100 mb-2">
+                <i class="ti ti-settings"></i> Product Management
+              </a>
+              <!-- Upload CSV -->
+              <button class="btn btn-outline-secondary w-100 mb-2 " data-bs-toggle="modal" data-bs-target="#uploadCsvModal">
+                <i class="ti ti-upload"></i> Upload CSV
+              </button>
+              <!-- Export csv-->
+              <button class="btn btn-outline-primary w-100 mb-2" id="export-btn">
+                <i class="ti ti-download"></i> Export CSV
+              </button>
+              <!-- <a href="{% url 'inventory' %}" class="btn btn-outline-primary w-100 mb-2">
+                <i class="ti ti-refresh"></i> Refresh
+              </a> -->
+            </div>
+          </div>
           <div class="card-header">
             <h6 class="mb-0">Summary</h6>
           </div>
@@ -128,24 +185,7 @@
             </ul>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="card mt-4">
-            <div class="card-header">
-              <h6 class="mb-0">Quick Actions</h6>
-            </div>
-            <div class="card-body">
-              <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="ti ti-plus"></i> Add Product
-              </button>
-              <a href="{% url 'inventory' %}" class="btn btn-outline-primary w-100 mb-2">
-                <i class="ti ti-refresh"></i> Refresh
-              </a>
-              <!-- Product Management Button -->
-              <a href="{% url 'product_management' %}" class="btn btn-outline-success w-100">
-                <i class="ti ti-settings"></i> Product Management
-              </a>              
-            </div>
-          </div>
+          
         </div>
       </div>
 
@@ -153,67 +193,12 @@
   </div>
 </div>
 
-<!-- 🧾 Add Product Modal -->
-<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form class="modal-content" method="POST" action="{% url 'add_product' %}">
-      {% csrf_token %}
-      <div class="modal-header">
-        <h5 class="modal-title">Add Product</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        {% include "pages/includes/product_form.html" %}
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ✏️ Edit Product Modal -->
-<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form class="modal-content" method="POST" id="edit-product-form">
-      {% csrf_token %}
-      <div class="modal-header">
-        <h5 class="modal-title">Edit Product</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        {% include "pages/includes/product_form.html" %}
-        <input type="hidden" name="product_id" id="edit-product-id">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Update</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- 📂 CSV Upload Modal -->
-<div class="modal fade" id="uploadCsvModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" method="POST" action="{% url 'upload_products_csv' %}" enctype="multipart/form-data">
-      {% csrf_token %}
-      <div class="modal-header">
-        <h5 class="modal-title">Upload Products (CSV)</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="file" name="file" class="form-control" accept=".csv" required>
-        <small class="text-muted">Ensure your CSV has columns: name, category, unit, sku, barcode, description, minQuantity, price, cost, stock</small>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Upload</button>
-      </div>
-    </form>
-  </div>
-</div>
+<!-- Add Product Modal -->
+{% include "pages/includes/add_product_modal.html" %}
+<!-- Edit Product Modal -->
+{% include "pages/includes/edit_product_modal.html" %}
+<!-- Upload CSV Modal -->
+{% include "pages/includes/upload_csv_modal.html" %}
 
 {% endblock content %}
 
@@ -246,27 +231,109 @@
     });
   });
 
-  // ✏️ Pre-fill Edit Modal
-  document.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const raw = btn.getAttribute('data-product');
-      let data = {};
-      try { data = JSON.parse(raw); } catch (e) { console.error('Invalid product data', e); }
+  // 🔍 Search + Filter logic
+  const searchInput = document.getElementById('inventory-search');
+  const categoryFilter = document.getElementById('filter-category');
+  const stockFilter = document.getElementById('filter-stock');
+  const tableRows = document.querySelectorAll('#inventory-table tbody tr');
+  
+  function filterTable() {
+    const search = searchInput.value.toLowerCase();
+    const category = categoryFilter.value.toLowerCase();
+    const stockFilterVal = stockFilter.value;
+  
+    tableRows.forEach(row => {
+      const name = row.dataset.name.toLowerCase();
+      const cat = row.dataset.category.toLowerCase();
+      const barcode = row.dataset.barcode;
+      const sku = row.dataset.sku;
+      const stockVal = parseInt(row.dataset.stock);
+      const minVal = parseInt(row.dataset.minquantity);
 
-      // Set form action
-      const form = document.getElementById('edit-product-form');
-      form.action = `/inventory/edit/${data.product_id}/`;
+      let show = true;
 
-      // Fill each field
-      for (const [key, val] of Object.entries(data)) {
-        const field = form.querySelector(`[name="${key}"]`);
-        if (field) field.value = val ?? '';
-      }
+      // if (search && !name.includes(search) && !cat.includes(search)) show = false;
+      if (search) {
+      const matchesSearch =
+        name.includes(search) ||
+        cat.includes(search) ||
+        barcode.includes(search) ||
+        sku.includes(search);
+      if (!matchesSearch) show = false;
+    }
+      if (category && cat !== category) show = false;
+      if (stockFilterVal === 'low' && stockVal > minVal) show = false;
+      if (stockFilterVal === 'ok' && stockVal <= minVal) show = false;
+  
+      row.style.display = show ? '' : 'none';
+    });
+  }
+  
+  [searchInput, categoryFilter, stockFilter].forEach(el => el.addEventListener('input', filterTable));
+  
+  // 🧭 Table Sorting
+  document.querySelectorAll('.sortable').forEach(header => {
+    header.addEventListener('click', () => {
+      const key = header.dataset.key;
+      const type = header.dataset.type || 'string';
+      const rows = Array.from(document.querySelectorAll('#inventory-table tbody tr'));
 
-      // Select dropdowns
-      if (data.category) form.querySelector('[name="category"]').value = data.category;
-      if (data.unit) form.querySelector('[name="unit"]').value = data.unit;
+      // Toggle sort direction
+      const current = header.dataset.order || 'asc';
+      const newOrder = current === 'asc' ? 'desc' : 'asc';
+      header.dataset.order = newOrder;
+
+      // Remove arrow icons from others
+      document.querySelectorAll('.sortable').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+      header.classList.add(newOrder === 'asc' ? 'sorted-asc' : 'sorted-desc');
+
+      // Sort logic
+      rows.sort((a, b) => {
+        const valA = a.dataset[key] || '';
+        const valB = b.dataset[key] || '';
+        if (type === 'number') {
+          return newOrder === 'asc' ? valA - valB : valB - valA;
+        }
+        return newOrder === 'asc'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      });
+
+      // Re-append sorted rows
+      const tbody = document.querySelector('#inventory-table tbody');
+      tbody.innerHTML = '';
+      rows.forEach(r => tbody.appendChild(r));
     });
   });
+
+  // 📦 Export to CSV
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const rows = [['Barcode','Name','SKU','Category','Stock','Min Qty','Cost','Price','Status']];
+    const tableRows = document.querySelectorAll('#inventory-table tbody tr');
+
+    tableRows.forEach(r => {
+      if (r.style.display !== 'none' && r.querySelector('td')) {
+        rows.push([
+          r.children[1].innerText, // Barcode
+          r.children[2].innerText, // Name
+          r.children[3].innerText, // SKU
+          r.children[4].innerText, // Category
+          r.children[5].innerText, // Stock
+          r.children[6].innerText, // Min Qty
+          r.children[7].innerText, // Cost
+          r.children[8].innerText, // Price
+          r.children[9].innerText  // Status
+        ]);
+      }
+    });
+
+    const csv = rows.map(e => e.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'inventory_export.csv';
+    link.click();
+  });
 </script>
+
 {% endblock extra_js %}

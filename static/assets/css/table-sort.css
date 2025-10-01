@@ -1,0 +1,31 @@
+.sortable {
+    cursor: pointer;
+    position: relative;
+  }
+  .sortable::after {
+    content: '⇅';
+    font-size: 0.7em;
+    margin-left: 4px;
+    color: #888;
+  }
+  .sorted-asc::after {
+    content: '↑';
+    color: var(--bs-primary);
+  }
+  .sorted-desc::after {
+    content: '↓';
+    color: var(--bs-primary);
+  }
+  
+  @media (prefers-color-scheme: light) {
+    table tbody tr td {
+      color: #1b1b1b !important; /* darker text for light bg */
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    table tbody tr td {
+      color: #d3d3d3 !important; /* bright gray for dark bg */
+    }
+  }
+
+  

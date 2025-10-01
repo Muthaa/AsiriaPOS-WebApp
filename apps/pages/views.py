@@ -12,6 +12,8 @@ from .utils import make_authenticated_request
 
 # Create your views here.
 
+API_BASE = "http://127.0.0.1:8080/api/"
+
 @api_login_required
 def index(request):
 
@@ -28,7 +30,7 @@ def get_todays_sales(request):
         response = make_authenticated_request(
             request, 
             'GET', 
-            'http://127.0.0.1:8080/api/sales/today/'
+            f"{API_BASE}sales/today/"
         )
         
         if response.status_code == 200:
@@ -60,7 +62,7 @@ def register(request):
                 'address': form.cleaned_data['address'],
             }
             try:
-                response = requests.post('http://127.0.0.1:8080/api/clients/', json=data)
+                response = requests.post(f"{API_BASE}clients/", json=data)
                 print(f"API POST response: {response.status_code} {response.text}")  # Debug print
                 if response.status_code == 201:
                     success_message = 'Registration successful! You can now log in.'
@@ -90,7 +92,7 @@ def login(request):
                 'password': form.cleaned_data['password'],
             }
             try:
-                response = requests.post('http://127.0.0.1:8080/api/token/', json=data)
+                response = requests.post(f"{API_BASE}token/", json=data)
                 print(f"API Login response: {response.status_code} {response.text}")  # Debug print
                 
                 if response.status_code == 200:
@@ -198,28 +200,36 @@ def purchases(request):
 
 @api_login_required
 def inventory(request):
-    products = []
-    categories = []
-    units = []
+    products, categories, units = [], [], []
     total_stock = 0
     low_stock_count = 0
+    api_online = True
+    error_message = None
 
-    # Fetch Products
-    resp_products = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/products/")
-    if resp_products.status_code == 200:
-        products = resp_products.json()
-        total_stock = sum(p.get("stock", 0) for p in products)
-        low_stock_count = sum(1 for p in products if p.get("stock", 0) <= p.get("minQuantity", 0))
+    try:
+        # --- Fetch Products ---
+        resp_products = make_authenticated_request(request, "GET", f"{API_BASE}products/")
+        if resp_products.status_code == 200:
+            products = resp_products.json()
+            total_stock = sum(p.get("stock", 0) for p in products)
+            low_stock_count = sum(1 for p in products if p.get("stock", 0) <= p.get("minQuantity", 0))
+        else:
+            api_online = False
+            error_message = f"⚠️ API error: {resp_products.status_code}"
 
-    # Fetch Categories
-    resp_cats = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/categories/")
-    if resp_cats.status_code == 200:
-        categories = resp_cats.json()
+        # --- Fetch Categories ---
+        resp_cats = make_authenticated_request(request, "GET", f"{API_BASE}categories/")
+        if resp_cats.status_code == 200:
+            categories = resp_cats.json()
 
-    # Fetch Units
-    resp_units = make_authenticated_request(request, "GET", "http://127.0.0.1:8080/api/units/")
-    if resp_units.status_code == 200:
-        units = resp_units.json()
+        # --- Fetch Units ---
+        resp_units = make_authenticated_request(request, "GET", f"{API_BASE}units/")
+        if resp_units.status_code == 200:
+            units = resp_units.json()
+
+    except requests.exceptions.ConnectionError:
+        api_online = False
+        error_message = "⚠️ Backend API is offline. Please try again later."
 
     context = {
         "products": products,
@@ -227,7 +237,10 @@ def inventory(request):
         "units": units,
         "total_stock": total_stock,
         "low_stock_count": low_stock_count,
+        "api_online": api_online,
+        "error_message": error_message,
     }
+
     return render(request, "pages/inventory.html", context)
 
 @api_login_required
@@ -260,7 +273,7 @@ def add_product(request):
         }
 
         # print("📦 ADD PRODUCT DATA:", data)
-        resp = make_authenticated_request(request, "POST", "http://127.0.0.1:8080/api/products/", data=data)
+        resp = make_authenticated_request(request, "POST", f"{API_BASE}products/", data=data)
         # print("📦 RESPONSE:", resp.status_code, resp.text)
 
         if resp.status_code in [200, 201]:
@@ -293,11 +306,11 @@ def edit_product(request, product_id):
             "stock": int(request.POST.get("stock") or 0),
         }
 
-        url = f"http://127.0.0.1:8080/api/products/{product_id}/"
-        print("✏️ EDIT PRODUCT:", data)
+        url = f"{API_BASE}products/{product_id}/"
+        # print("✏️ EDIT PRODUCT:", data)
 
         response = make_authenticated_request(request, "PUT", url, data=data)
-        print("✏️ RESPONSE:", response.status_code, response.text)
+        # print("✏️ RESPONSE:", response.status_code, response.text)
 
         if response.status_code in (200, 201):
             messages.success(request, "✅ Product updated successfully.")
@@ -313,7 +326,7 @@ def delete_products(request):
         ids = request.POST.getlist("product_ids")
         deleted = 0
         for pid in ids:
-            url = f"http://127.0.0.1:8080/api/products/{pid}/"
+            url = f"{API_BASE}products/{pid}/"
             resp = make_authenticated_request(request, "DELETE", url)
             if resp.status_code in (200, 204):
                 deleted += 1
@@ -357,7 +370,7 @@ def upload_products_csv(request):
                 "stock": int(row.get("stock") or 0),
             }
 
-            resp = make_authenticated_request(request, "POST", "http://127.0.0.1:8080/api/products/", data=data)
+            resp = make_authenticated_request(request, "POST", f"{API_BASE}products/", data=data)
             if resp.status_code in (200, 201):
                 count += 1
             else:
@@ -369,22 +382,70 @@ def upload_products_csv(request):
 
     return redirect("inventory")
 
-API_BASE = "http://127.0.0.1:8080/api/"
+# @api_login_required
+# def product_management(request):
+#     """Show product management dashboard with categories, units, alerts, etc."""
+#     products = make_authenticated_request(request, "GET", f"{API_BASE}products/").json()
+#     categories = make_authenticated_request(request, "GET", f"{API_BASE}categories/").json()
+#     units = make_authenticated_request(request, "GET", f"{API_BASE}units/").json()
+#     alerts = make_authenticated_request(request, "GET", f"{API_BASE}stock-alerts/").json()
+
+#     return render(request, "pages/product_management.html", {
+#         "products": products,
+#         "categories": categories,
+#         "units": units,
+#         "alerts": alerts,
+#     })
 
 @api_login_required
 def product_management(request):
     """Show product management dashboard with categories, units, alerts, etc."""
-    products = make_authenticated_request(request, "GET", f"{API_BASE}products/").json()
-    categories = make_authenticated_request(request, "GET", f"{API_BASE}categories/").json()
-    units = make_authenticated_request(request, "GET", f"{API_BASE}units/").json()
-    alerts = make_authenticated_request(request, "GET", f"{API_BASE}stock-alerts/").json()
+    products, categories, units, alerts = [], [], [], []
+    api_online = True
+    error_message = None
 
-    return render(request, "pages/product_management.html", {
+    try:
+        # Products
+        resp_products = make_authenticated_request(request, "GET", f"{API_BASE}products/")
+        if resp_products.status_code == 200:
+            products = resp_products.json()
+        else:
+            api_online = False
+            error_message = f"⚠️ API error: Products ({resp_products.status_code})"
+
+        # Categories
+        resp_cats = make_authenticated_request(request, "GET", f"{API_BASE}categories/")
+        if resp_cats.status_code == 200:
+            categories = resp_cats.json()
+
+        # Units
+        resp_units = make_authenticated_request(request, "GET", f"{API_BASE}units/")
+        if resp_units.status_code == 200:
+            units = resp_units.json()
+
+        # Stock Alerts
+        try:
+            resp_alerts = make_authenticated_request(request, "GET", f"{API_BASE}stockalerts/")
+            if resp_alerts.status_code == 200:
+                alerts = resp_alerts.json()
+        except Exception:
+            # stockalerts endpoint may not exist or fail independently
+            alerts = []
+
+    except requests.exceptions.ConnectionError:
+        api_online = False
+        error_message = "⚠️ Backend API is offline. Please try again later."
+
+    context = {
         "products": products,
         "categories": categories,
         "units": units,
         "alerts": alerts,
-    })
+        "api_online": api_online,
+        "error_message": error_message,
+    }
+
+    return render(request, "pages/product_management.html", context)
 
 # ----------------- CATEGORY CRUD -----------------
 @api_login_required
